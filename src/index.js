@@ -57,12 +57,12 @@ let hierarchy = observable({
     },
     {
       id: 2,
-      type: "Module",
+      type: "AscentModule",
       name: "Module 2",
     },
     {
       id: 3,
-      type: "Module",
+      type: "AscentModule",
       name: "Module 3",
     },
   ],
@@ -70,19 +70,18 @@ let hierarchy = observable({
 
 let currentlyChecked = observable([]);
 
-const recursive = (element, id, type, doCheck, uncheckAll, list) => {
-  if (uncheckAll) {
-    element.checked = false;
-    (element.children || []).forEach(child =>
-      recursive(child, id, type, doCheck, uncheckAll, list)
-    );
-    return true;
-  }
+// iterate until you find the one you want, then you toggle yourself and call a
+// separate simpler function to flip off your subtree, and then  return true to
+// say you found it. If one of your children returns true, that means you're an
+// ancestor, so you flip off and return true (don't need to finish traversing,
+// you've found the one you're looking for). If none return true, you return false,
+// saying you're not an ancestor. That sets the tree correctly, then it's a separate
+// much simpler function to scan that new tree for which ones are checked.
 
+const recursive = (element, id, type, doCheck, uncheckAll) => {
   if (element.id === id && element.type === type) {
     if (doCheck) {
-      list.push(`${element.type}_${element.id}`);
-      recursive(element, id, type, doCheck, true, list);
+      uncheckSubtree(element, id, type, doCheck);
     }
     element.checked = doCheck;
     return true;
@@ -90,7 +89,7 @@ const recursive = (element, id, type, doCheck, uncheckAll, list) => {
 
   let isParent = (element.children || []).reduce(
     (isParent, child) =>
-      recursive(child, id, type, doCheck, uncheckAll, list) || isParent,
+      recursive(child, id, type, doCheck, uncheckAll) || isParent,
     false
   );
 
@@ -99,14 +98,27 @@ const recursive = (element, id, type, doCheck, uncheckAll, list) => {
     return true;
   }
 
-  if (element.checked) list.push(`${element.type}_${element.id}`);
-
   return false;
 };
 
+const uncheckSubtree = element => {
+  element.checked = false;
+  (element.children || []).forEach(child => uncheckSubtree(child));
+};
+
+var collectCurrentlyChecked = (element, currentlyChecked) => {
+  if (element.checked) {
+    currentlyChecked.push(`${element.type}_${element.id}`);
+  }
+  (element.children || []).forEach(child =>
+    collectCurrentlyChecked(child, currentlyChecked)
+  );
+};
+
 var toggleOnTheOne = (id, type, checked) => {
+  recursive(hierarchy, id, type, checked, false);
   while (currentlyChecked.length) currentlyChecked.pop();
-  recursive(hierarchy, id, type, checked, false, currentlyChecked);
+  collectCurrentlyChecked(hierarchy, currentlyChecked);
 };
 
 let App = observer(function App() {

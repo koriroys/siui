@@ -2,6 +2,11 @@
   font-family: sans-serif;
 }
 
+ul {
+  list-style: none;
+  padding-left: 17px;
+}
+
 .highlight {
   border: 1px solid green;
 }
